@@ -1,14 +1,12 @@
 resource "google_compute_network" "kubernetes-the-hard-way" {
   name = "kubernetes-the-hard-way"
   auto_create_subnetworks = false
-  project = "${google_project.project.project_id}"
 }
 
 resource "google_compute_subnetwork" "kubernetes" {
   name = "kubernetes"
   ip_cidr_range = "10.240.0.0/24"
   network ="${google_compute_network.kubernetes-the-hard-way.self_link}"
-  project = "${google_project.project.project_id}"
 }
 
 resource "google_compute_firewall" "kubernetes-the-hard-way-allow-internal" {
@@ -28,7 +26,6 @@ resource "google_compute_firewall" "kubernetes-the-hard-way-allow-internal" {
     protocol = "icmp"
   }
 
-  project = "${google_project.project.project_id}"
   depends_on = ["google_compute_network.kubernetes-the-hard-way"]
 }
 
@@ -46,13 +43,11 @@ resource "google_compute_firewall" "kubernetes-the-hard-way-allow-external" {
     protocol = "icmp"
   }
 
-  project = "${google_project.project.project_id}"
   depends_on = ["google_compute_network.kubernetes-the-hard-way"]
 }
 
 resource "google_compute_address" "kubernetes-the-hard-way" {
   name = "kubernetes-the-hard-way"
-  project = "${google_project.project.project_id}"
 }
 
 data "google_compute_image" "ubuntu-server-16-04" {
@@ -91,7 +86,6 @@ resource "google_compute_instance" "controller" {
   }
 
   depends_on = ["google_compute_subnetwork.kubernetes"]
-  project = "${google_project.project.project_id}"
 }
 
 resource "google_compute_instance" "worker" {
@@ -129,5 +123,4 @@ resource "google_compute_instance" "worker" {
   }
 
   depends_on = ["google_compute_subnetwork.kubernetes"]
-  project = "${google_project.project.project_id}"
 }

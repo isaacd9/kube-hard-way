@@ -2,10 +2,7 @@ provider "google" {
   region = "us-west1"
   zone = "us-west1-c"
   credentials = "${file("../secrets/account.json")}"
+  project = "${file("../secrets/project_id")}"
 }
 
-resource "google_project" "project" {
-  name = "kube-hard-way"
-  project_id = "${file("../secrets/project_id")}"
-  billing_account = "${file("../secrets/billing_account")}"
-}
+data "google_project" "project" {}
