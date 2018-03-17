@@ -72,6 +72,8 @@ resource "google_compute_instance" "controller" {
   network_interface {
     address = "10.240.0.1${count.index}"
     subnetwork = "${google_compute_subnetwork.kubernetes.self_link}"
+
+    access_config { }
   }
 
   service_account {
@@ -105,6 +107,8 @@ resource "google_compute_instance" "worker" {
   network_interface {
     address = "10.240.0.2${count.index}"
     subnetwork = "${google_compute_subnetwork.kubernetes.self_link}"
+
+    access_config { }
   }
 
   service_account {

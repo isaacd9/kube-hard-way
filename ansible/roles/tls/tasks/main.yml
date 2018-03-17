@@ -1,0 +1,95 @@
+---
+- name: generate ca cert
+  shell:
+    cfssl gencert -initca roles/tls/files/ca-csr.json | cfssljson -bare roles/tls/files/ca
+  delegate_to: 127.0.0.1
+  args:
+    creates: roles/tls/files/ca.pem
+
+- name: generate admin cert
+  shell: |
+    cfssl gencert \
+      -ca=roles/tls/files/ca.pem \
+      -ca-key=roles/tls/files/ca-key.pem \
+      -config=roles/tls/files/ca-config.json \
+      -profile=kubernetes \
+      roles/tls/files/admin-csr.json | cfssljson -bare roles/tls/files/admin
+  delegate_to: 127.0.0.1
+  args:
+    creates: roles/tls/files/admin.pem
+
+- name: generate kubelet client CSRs
+  template:
+    src: roles/tls/templates/worker-csr.json.j2
+    dest: roles/tls/files/{{ inventory_hostname }}-csr.json
+  delegate_to: 127.0.0.1
+  when: ("tag_worker" in group_names)
+
+- name: generate kubelet client cert
+  shell: |
+    cfssl gencert \
+      -ca=roles/tls/files/ca.pem \
+      -ca-key=roles/tls/files/ca-key.pem \
+      -config=roles/tls/files/ca-config.json \
+      -profile=kubernetes \
+      -hostname=roles/tls/files/{{ inventory_hostname }},{{ gce_public_ip }},{{ gce_private_ip }} \
+      roles/tls/files/{{ inventory_hostname }}-csr.json | cfssljson -bare roles/tls/files/{{ inventory_hostname }}
+  args:
+    creates: roles/tls/files/{{ inventory_hostname }}.pem
+  delegate_to: 127.0.0.1
+  when: ("tag_worker" in group_names)
+
+- name: generate kube-proxy client cert
+  shell: |
+    cfssl gencert \
+      -ca=roles/tls/files/ca.pem \
+      -ca-key=roles/tls/files/ca-key.pem \
+      -config=roles/tls/files/ca-config.json \
+      -profile=kubernetes \
+      roles/tls/files/kube-proxy-csr.json | cfssljson -bare roles/tls/files/kube-proxy
+  args:
+    creates: roles/tls/files/kube-proxy.pem
+  delegate_to: 127.0.0.1
+
+- name: generate kubernetes cert
+  shell: |
+    cfssl gencert \
+      -ca=roles/tls/files/ca.pem \
+      -ca-key=roles/tls/files/ca-key.pem \
+      -config=roles/tls/files/ca-config.json \
+      -profile=kubernetes \
+      -hostname=10.32.0.1,10.240.0.10,10.240.0.11,10.240.0.12,{{ public_address }},127.0.0.1,kubernetes.default \
+      roles/tls/files/kubernetes-csr.json | cfssljson -bare roles/tls/files/kubernetes
+  args:
+    creates: roles/tls/files/kubernetes.pem
+  delegate_to: 127.0.0.1
+
+- name: copy ca cert
+  copy:
+    src: roles/tls/files/ca.pem
+    dest: ~/ca.pem
+
+- name: copy worker key
+  copy:
+    src: "roles/tls/files/{{ inventory_hostname }}-key.pem"
+    dest: "~/{{ inventory_hostname }}-key.pem"
+  when: ("tag_worker" in group_names)
+
+- name: copy worker cert
+  copy:
+    src: "roles/tls/files/{{ inventory_hostname }}.pem"
+    dest: "~/{{ inventory_hostname }}.pem"
+  when: ("tag_worker" in group_names)
+
+- name: copy kube key
+  copy:
+    src: "roles/tls/files/kubernetes-key.pem"
+    dest: "~/kubernetes-key.pem"
+  when: ("tag_controller" in group_names)
+
+- name: copy kube cert
+  copy:
+    src: "roles/tls/files/kubernetes.pem"
+    dest: "~/kubernetes.pem"
+  when: ("tag_controller" in group_names)
+
